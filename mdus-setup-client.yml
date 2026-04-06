@@ -17,7 +17,7 @@
   # 2. Verify share accessibility by copying a tiny test file
   - name: Copy a small test file to confirm credentials and connectivity
     win_copy:
-      src: "{{ mdus_share }}\01_WSUS\test\mdus_check.txt"
+      src: "{{ mdus_share }}\01_WSUS\wsus-auto.reg"
       dest: C:\Temp\mdus_check.txt
     register: share_test
     retries: 3
@@ -53,17 +53,17 @@
     register: import_auto
     failed_when: import_auto.rc != 0
 
-  - name: (Optional) Remove previous WSUS settings
-    win_command: reg import "C:\Temp\wsusremove-settings.reg"
-    register: import_remove
-    failed_when: import_remove.rc != 0
-    when: remove_old_wsus
+ # - name: (Optional) Remove previous WSUS settings
+   # win_command: reg import "C:\Temp\wsusremove-settings.reg"
+   # register: import_remove
+   # failed_when: import_remove.rc != 0
+   # when: remove_old_wsus
 
-  - name: (Optional) Import SQL manual‑update registry
-    win_command: reg import "C:\Temp\SQL_wsus_manual.reg"
-    register: import_sql
-    failed_when: import_sql.rc != 0
-    when: "'SQL' in ansible_hostname"
+  #-name: (Optional) Import SQL manual‑update registry
+    #win_command: reg import "C:\Temp\SQL_wsus_manual.reg"
+    #register: import_sql
+   # failed_when: import_sql.rc != 0
+   # when: "'SQL' in ansible_hostname"
 
   # 5. Run the WSUS re‑initialisation batch file
   - name: Re‑initialize WSUS client
