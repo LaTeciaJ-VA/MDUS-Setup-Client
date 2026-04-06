@@ -2,10 +2,10 @@
 # Default values – override in inventory or extra-vars
 # -------------------------------------------------
 mdus_share: '\\htm-mdus.med.va.com\public'
-reg_folder: "{{ mdus_share }}\01_WSUS\Advanced_WSUS_REG_Files"
+reg_folder: "{{ mdus_share }}\01_WSUS"
 wsus_auto_reg: "{{ reg_folder }}\wsus-auto.reg"
 wsus_remove_reg: "{{ reg_folder }}\wsusremove-settings.reg"
-sql_manual_reg: "{{ reg_folder }}\SQL_wsus_manual.reg"
+sql_manual_reg: "{{ reg_folder }}\Advanced_WSUS_REG_Files\SQL_wsus_manual.reg"
 reinit_bat: "{{ mdus_share }}\01_WSUS\wsus-reinitialize.bat"
 
 # Time (24-h) for the nightly unattended install – default 03:00
