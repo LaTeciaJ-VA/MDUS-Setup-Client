@@ -88,20 +88,31 @@
       msg: "{{ mdus_server_check.stdout }}"
 
   # 7. Create/ensure the nightly unattended‑install scheduled task
-  - name: Create scheduled task for nightly MDUS install
-    win_scheduled_task:
-      name: MDUS_Nightly_Install
-      actions:
-        - path: C:\Windows\System32\wuauclt.exe
-          arguments: "/detectnow /updatenow"
-      triggers:
-        - type: daily
-          start_boundary: "{{ lookup('pipe','date +%Y-%m-%d') }}T{{ mdus_install_time }}:00"
-      enabled: yes
-      run_level: highest
-      username: SYSTEM
-      state: present
-
+#  - name: Create scheduled task for nightly MDUS install
+ #   win_scheduled_task:
+ #     name: MDUS_Nightly_Install
+ #     actions:
+   #     - path: C:\Windows\System32\wuauclt.exe
+   #       arguments: "/detectnow /updatenow"
+   #   triggers:
+    #    - type: daily
+   #       start_boundary: "{{ lookup('pipe','date +%Y-%m-%d') }}T{{ mdus_install_time }}:00"
+    #  enabled: yes
+    #  run_level: highest
+    #  username: SYSTEM
+   #   state: present
+  - name: Create scheduled task for nightly MDUS
+    ansible.windows.win_command: >
+      schtasks /create /tn "MDUS_Nightly_Install"
+      /tr "C:\Windows\System32\wuauclt.exe /detectnow /updatenow"
+      /sc daily
+      /st {{ mdus_install_time }}
+      /ru "SYSTEM"
+      /rl HIGHEST
+      /f
+    register: task_creation
+    changed_when: "'SUCCESS' in task_creation.stdout"
+    
   # 8. Clean up temporary files (always runs, even on failure)
   - block:
       - name: Remove temporary registry and batch files
