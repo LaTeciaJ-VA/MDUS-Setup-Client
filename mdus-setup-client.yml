@@ -1,6 +1,8 @@
 ---
 - name: Configure HTM MDUS on Windows medical devices
   hosts: all                 # inventory group
+  collections: 
+    - ansible.windows
   gather_facts: false
   serial: 5                           # limit parallel runs for large fleets
   vars_files:
