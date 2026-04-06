@@ -1,0 +1,15 @@
+# -------------------------------------------------
+# Default values – override in inventory or extra-vars
+# -------------------------------------------------
+mdus_share: 'changeme'
+reg_folder: "{{ mdus_share }}\01_WSUS\Advanced_WSUS_REG_Files"
+wsus_auto_reg: "{{ reg_folder }}\wsus-auto.reg"
+wsus_remove_reg: "{{ reg_folder }}\wsusremove-settings.reg"
+sql_manual_reg: "{{ reg_folder }}\SQL_wsus_manual.reg"
+reinit_bat: "{{ mdus_share }}\01_WSUS\wsus-reinitialize.bat"
+
+# Time (24-h) for the nightly unattended install – default 03:00
+mdus_install_time: "03:00"
+
+# Set to true only when you need to clear a previous WSUS affiliation
+remove_old_wsus: false

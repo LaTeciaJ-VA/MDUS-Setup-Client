@@ -1,0 +1,119 @@
+---
+- name: Configure HTM MDUS on Windows medical devices
+  hosts: all                 # inventory group
+  gather_facts: false
+  serial: 5                           # limit parallel runs for large fleets
+  vars_files:
+    - vars/mdus_defaults.yml       # default variable file
+
+  tasks:
+
+  # 1. Ensure temporary directory exists
+  - name: Ensure C:\Temp directory exists
+    win_file:
+      path: C:\Temp
+      state: directory
+
+  # 2. Verify share accessibility by copying a tiny test file
+  - name: Copy a small test file to confirm credentials and connectivity
+    win_copy:
+      src: "{{ mdus_share }}\01_WSUS\test\mdus_check.txt"
+      dest: C:\Temp\mdus_check.txt
+    register: share_test
+    retries: 3
+    delay: 10
+    until: share_test is succeeded
+    failed_when: share_test is failed
+
+  # 3. Pull the required registry and batch files from the MDUS share
+  - name: Copy wsus-auto.reg locally
+    win_copy:
+      src: "{{ wsus_auto_reg }}"
+      dest: C:\Temp\wsus-auto.reg
+
+  - name: Copy wsus-remove-settings.reg (optional – for WSUS cleanup)
+    win_copy:
+      src: "{{ wsus_remove_reg }}"
+      dest: C:\Temp\wsusremove-settings.reg
+    when: remove_old_wsus
+
+  - name: Copy SQL_wsus_manual.reg (optional – for SQL devices)
+    win_copy:
+      src: "{{ sql_manual_reg }}"
+      dest: C:\Temp\SQL_wsus_manual.reg
+
+  - name: Copy wsus-reinitialize.bat
+    win_copy:
+      src: "{{ reinit_bat }}"
+      dest: C:\Temp\wsus-reinitialize.bat
+
+  # 4. Import registry files (real .reg import, not win_regedit)
+  - name: Import wsus-auto.reg to enroll the device
+    win_command: reg import "C:\Temp\wsus-auto.reg"
+    register: import_auto
+    failed_when: import_auto.rc != 0
+
+  - name: (Optional) Remove previous WSUS settings
+    win_command: reg import "C:\Temp\wsusremove-settings.reg"
+    register: import_remove
+    failed_when: import_remove.rc != 0
+    when: remove_old_wsus
+
+  - name: (Optional) Import SQL manual‑update registry
+    win_command: reg import "C:\Temp\SQL_wsus_manual.reg"
+    register: import_sql
+    failed_when: import_sql.rc != 0
+    when: "'SQL' in ansible_hostname"
+
+  # 5. Run the WSUS re‑initialisation batch file
+  - name: Re‑initialize WSUS client
+    win_command: C:\Temp\wsus-reinitialize.bat
+    args:
+      creates: C:\Windows\SoftwareDistribution\Download
+    register: reinit
+    failed_when: reinit.rc != 0
+
+  # 6. Verify that the device now points to the HTM MDUS server
+  - name: Query WSUS server URL from the registry
+    win_command: |
+      reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate" /v WUServer
+    register: mdus_server_check
+    failed_when: mdus_server_check.rc != 0
+
+  - name: Show MDUS server configuration
+    debug:
+      msg: "{{ mdus_server_check.stdout }}"
+
+  # 7. Create/ensure the nightly unattended‑install scheduled task
+  - name: Create scheduled task for nightly MDUS install
+    win_scheduled_task:
+      name: MDUS_Nightly_Install
+      actions:
+        - path: C:\Windows\System32\wuauclt.exe
+          arguments: "/detectnow /updatenow"
+      triggers:
+        - type: daily
+          start_boundary: "{{ lookup('pipe','date +%Y-%m-%d') }}T{{ mdus_install_time }}:00"
+      enabled: yes
+      run_level: highest
+      username: SYSTEM
+      state: present
+
+  # 8. Clean up temporary files (always runs, even on failure)
+  - block:
+      - name: Remove temporary registry and batch files
+        win_file:
+          path: "{{ item }}"
+          state: absent
+        loop:
+          - C:\Temp\wsus-auto.reg
+          - C:\Temp\wsusremove-settings.reg
+          - C:\Temp\SQL_wsus_manual.reg
+          - C:\Temp\wsus-reinitialize.bat
+          - C:\Temp\mdus_check.txt
+    always: true   # ensures cleanup runs even if earlier tasks failed
+
+  # 9. Final status report
+  - name: Report success
+    debug:
+      msg: "MDUS configuration completed successfully on {{ inventory_hostname }}."
