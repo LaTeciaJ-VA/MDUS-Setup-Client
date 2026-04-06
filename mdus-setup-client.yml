@@ -112,7 +112,7 @@
       /f
     register: task_creation
     changed_when: "'SUCCESS' in task_creation.stdout"
-    
+
   # 8. Clean up temporary files (always runs, even on failure)
   - block:
       - name: Remove temporary registry and batch files
@@ -125,9 +125,7 @@
           - C:\Temp\SQL_wsus_manual.reg
           - C:\Temp\wsus-reinitialize.bat
           - C:\Temp\mdus_check.txt
-    always: true   # ensures cleanup runs even if earlier tasks failed
-
-  # 9. Final status report
-  - name: Report success
-    debug:
-      msg: "MDUS configuration completed successfully on {{ inventory_hostname }}."
+    always: 
+      - name: Report success
+        debug:
+          msg: "MDUS configuration completed successfully on {{ inventory_hostname }}."
