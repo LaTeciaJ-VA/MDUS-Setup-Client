@@ -1,7 +1,7 @@
 # -------------------------------------------------
 # Default values – override in inventory or extra-vars
 # -------------------------------------------------
-mdus_share: 'changeme'
+mdus_share: '\\htm-mdus.med.va.com\public'
 reg_folder: "{{ mdus_share }}\01_WSUS\Advanced_WSUS_REG_Files"
 wsus_auto_reg: "{{ reg_folder }}\wsus-auto.reg"
 wsus_remove_reg: "{{ reg_folder }}\wsusremove-settings.reg"
