@@ -6,7 +6,7 @@ reg_folder: '{{ mdus_share }}\01_WSUS'
 wsus_auto_reg: '{{ reg_folder }}\wsus-auto.reg'
 wsus_remove_reg: '{{ reg_folder }}\wsusremove-settings.reg'
 sql_manual_reg: '{{ reg_folder }}\Advanced_WSUS_REG_Files\SQL_wsus_manual.reg'
-reinit_bat: '{{ mdus_share }}\01_WSUS\wsus-reinitialize.bat'
+reinit_bat: '{{ mdus_share }}\01_WSUS\wsus_reinitialize.bat'
 
 # Time (24-h) for the nightly unattended install – default 03:00
 mdus_install_time: "03:00"
