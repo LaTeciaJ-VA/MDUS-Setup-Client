@@ -2,7 +2,7 @@
 - name: Configure HTM MDUS on Windows medical devices
   hosts: all                 # inventory group
   become: true
-  become_user: "VHAV06HTMAPP"
+  become_user: 'VA\VHAV06HTMAPP'
   collections: 
     - ansible.windows
     - community.windows
