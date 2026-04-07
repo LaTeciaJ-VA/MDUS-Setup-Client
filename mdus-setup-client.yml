@@ -85,7 +85,7 @@
   # 6. Verify that the device now points to the HTM MDUS server
   - name: Query WSUS server URL from the registry
     win_command: |
-      reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate" /v WUServer
+      reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate" /v WUServer
     register: mdus_server_check
     failed_when: mdus_server_check.rc != 0
 
