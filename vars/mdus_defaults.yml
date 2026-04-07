@@ -13,4 +13,4 @@ mdus_install_time: "03:00"
 
 # Set to true only when you need to clear a previous WSUS affiliation
 remove_old_wsus: false
-ansible_become_password: "{{ ansible_password }}"
+ansible_become_password: "{{ password }}"
