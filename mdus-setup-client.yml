@@ -51,10 +51,10 @@
       src: "{{ sql_manual_reg }}"
       dest: C:\Temp\SQL_wsus_manual.reg
       remote_src: yes
-  - name: Copy wsus-reinitialize.bat
+  - name: Copy wsus_reinitialize.bat
     win_copy:
       src: "{{ reinit_bat }}"
-      dest: C:\Temp\wsus-reinitialize.bat
+      dest: C:\Temp\wsus_reinitialize.bat
       remote_src: yes
   # 4. Import registry files (real .reg import, not win_regedit)
   - name: Import wsus-auto.reg to enroll the device
@@ -76,7 +76,7 @@
 
   # 5. Run the WSUS re‑initialisation batch file
   - name: Re-initialize WSUS client
-    win_command: C:\Temp\wsus-reinitialize.bat
+    win_command: C:\Temp\wsus_reinitialize.bat
     args:
       creates: C:\Windows\SoftwareDistribution\Download
     register: reinit
@@ -129,7 +129,7 @@
           - C:\Temp\wsus-auto.reg
           - C:\Temp\wsusremove-settings.reg
           - C:\Temp\SQL_wsus_manual.reg
-          - C:\Temp\wsus-reinitialize.bat
+          - C:\Temp\wsus_reinitialize.bat
           - C:\Temp\mdus_check.txt
     always: 
       - name: Report success
