@@ -20,7 +20,8 @@
   # 2. Verify share accessibility by copying a tiny test file
   - name: Copy a small test file to confirm credentials and connectivity
     win_copy:
-      src: "{{ [mdus_share, '01_WSUS', 'wsus-auto.reg'] | join('\\') }}"
+      src: >-
+        {{ mdus_share }}\01_WSUS\wsus-auto.reg
       dest: C:\Temp\mdus_check.txt
       remote_src: yes
     register: share_test
