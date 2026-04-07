@@ -3,7 +3,7 @@
   hosts: all                 # inventory group
   become: true
   become_user: 'VA\VHAV06HTMAAP'
-  become_flags: "logon_type=new_credentials logon_provider=default"
+  become_flags: "logon_type=new_credentials"
   collections: 
     - ansible.windows
     - community.windows
