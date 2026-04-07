@@ -38,23 +38,24 @@
     win_copy:
       src: "{{ wsus_auto_reg }}"
       dest: C:\Temp\wsus-auto.reg
-
+      remote_src: yes
   - name: Copy wsus-remove-settings.reg (optional - for WSUS cleanup)
     win_copy:
       src: "{{ wsus_remove_reg }}"
       dest: C:\Temp\wsusremove-settings.reg
+      remote_src: yes
     when: remove_old_wsus
 
   - name: Copy SQL_wsus_manual.reg (optional - for SQL devices)
     win_copy:
       src: "{{ sql_manual_reg }}"
       dest: C:\Temp\SQL_wsus_manual.reg
-
+      remote_src: yes
   - name: Copy wsus-reinitialize.bat
     win_copy:
       src: "{{ reinit_bat }}"
       dest: C:\Temp\wsus-reinitialize.bat
-
+      remote_src: yes
   # 4. Import registry files (real .reg import, not win_regedit)
   - name: Import wsus-auto.reg to enroll the device
     win_command: reg import "C:\Temp\wsus-auto.reg"
