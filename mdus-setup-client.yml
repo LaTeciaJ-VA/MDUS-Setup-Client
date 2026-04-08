@@ -109,7 +109,7 @@
 
       - name: Query WSUS server URL from the registry
         ansible.windows.win_reg_stat:
-          path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate
+          path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\WindowsUpdate
           name: WUServer
         register: mdus_reg_stat
 
