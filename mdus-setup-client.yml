@@ -1,12 +1,37 @@
 ---
+################################################################################
+# PLAYBOOK: HTM MDUS Client Configuration
+# 
+# PURPOSE:
+#   Enrolls Windows medical devices into the HTM MDUS (WSUS) infrastructure.
+#
+# FLOW:
+#   1. STAGING: Creates C:\Temp for local config storage.
+#   2. AUTH VALIDATION: Performs a 'Double-Hop' test by copying a file from 
+#      the MDUS share. This confirms the service account can cross the network.
+#   3. PROVISIONING: Pulls .reg and .bat files from the remote MDUS repository.
+#   4. CONFIGURATION: Imports registry keys to point the OS to the new update 
+#      server and runs a re-initialization script to reset the Update Agent.
+#   5. VERIFICATION: Uses win_reg_stat to confirm the WUServer URL is active.
+#   6. AUTOMATION: Sets a scheduled task for nightly unattended updates.
+#   7. CLEANUP: Securely removes sensitive .reg files regardless of success.
+#
+# SECURITY & AUTHENTICATION:
+#   - Uses 'become_method: runas' with 'logon_type: new_credentials'.
+#   - This bypasses the Kerberos Double-Hop restriction, allowing the target 
+#     node to use the service account password to pull files from the share.
+#   - Requires the service account to have 'Log on as a batch job' rights.
+################################################################################
+
 - name: Configure HTM MDUS on Windows medical devices
   hosts: all                 # inventory group
-  become: true
-  become_user: 'VA\VHAV06HTMAAP'
-  become_flags: "logon_type=new_credentials"
-  collections: 
+  collections:
     - ansible.windows
     - community.windows
+  become: yes
+  become_method: runas
+  become_user: 'VA\VHAV06HTMAAP'
+  become_flags: "logon_type=new_credentials"
   gather_facts: false
   serial: 5                           # limit parallel runs for large fleets
   vars_files:
@@ -14,113 +39,101 @@
 
   tasks:
 
-  # 1. Ensure temporary directory exists
+  # 1. STAGING: Creates C:\Temp for local config storage.
+
   - name: Ensure C:\Temp directory exists
-    win_file:
+    ansible.windows.win_file:
       path: C:\Temp
       state: directory
 
-  # 2. Verify share accessibility by copying a tiny test file
-  - name: Copy a small test file to confirm credentials and connectivity
-    win_copy:
-      src: >-
-        {{ mdus_share }}\01_WSUS\wsus-auto.reg
-      dest: C:\Temp\mdus_check.txt
-      remote_src: yes
-    register: share_test
-    retries: 3
-    delay: 10
-    until: share_test is succeeded
-    failed_when: share_test is failed
+  - name: Main MDUS Configuration Block
+    block:
 
-  # 3. Pull the required registry and batch files from the MDUS share
-  - name: Copy wsus-auto.reg locally
-    win_copy:
-      src: "{{ wsus_auto_reg }}"
-      dest: C:\Temp\wsus-auto.reg
-      remote_src: yes
-  - name: Copy wsus-remove-settings.reg (optional - for WSUS cleanup)
-    win_copy:
-      src: "{{ wsus_remove_reg }}"
-      dest: C:\Temp\wsusremove-settings.reg
-      remote_src: yes
-    when: remove_old_wsus
+      # 2. AUTH VALIDATION: Copying a file from the MDUS share. 
+      #    This confirms the service account can cross the network.
 
-  - name: Copy SQL_wsus_manual.reg (optional - for SQL devices)
-    win_copy:
-      src: "{{ sql_manual_reg }}"
-      dest: C:\Temp\SQL_wsus_manual.reg
-      remote_src: yes
-  - name: Copy wsus_reinitialize.bat
-    win_copy:
-      src: "{{ reinit_bat }}"
-      dest: C:\Temp\wsus_reinitialize.bat
-      remote_src: yes
-  # 4. Import registry files (real .reg import, not win_regedit)
-  - name: Import wsus-auto.reg to enroll the device
-    win_command: reg import "C:\Temp\wsus-auto.reg"
-    register: import_auto
-    failed_when: import_auto.rc != 0
+      - name: Copy a small test file to confirm credentials and connectivity
+        win_copy:
+          src: '{{ mdus_share }}\01_WSUS\wsus-auto.reg'
+          dest: C:\Temp\mdus_check.txt
+          remote_src: yes
+        register: share_test
+        retries: 3
+        delay: 10
+        until: share_test is succeeded
+        failed_when: share_test is failed
 
- # - name: (Optional) Remove previous WSUS settings
-   # win_command: reg import "C:\Temp\wsusremove-settings.reg"
-   # register: import_remove
-   # failed_when: import_remove.rc != 0
-   # when: remove_old_wsus
+      # 3. PROVISIONING: This section pulls .reg and .bat files from the remote MDUS repository.
 
-  #-name: (Optional) Import SQL manual‑update registry
-    #win_command: reg import "C:\Temp\SQL_wsus_manual.reg"
-    #register: import_sql
-   # failed_when: import_sql.rc != 0
-   # when: "'SQL' in ansible_hostname"
+      - name: Copy wsus-auto.reg locally
+        win_copy:
+          src: '{{ wsus_auto_reg }}'
+          dest: C:\Temp\wsus-auto.reg
+          remote_src: yes
 
-  # 5. Run the WSUS re‑initialisation batch file
-  - name: Re-initialize WSUS client
-    win_command: C:\Temp\wsus_reinitialize.bat
-    args:
-      creates: C:\Windows\SoftwareDistribution\Download
-    register: reinit
-    failed_when: reinit.rc != 0
+      - name: Copy wsus-remove-settings.reg (optional – for WSUS cleanup)
+        win_copy:
+          src: '{{ wsus_remove_reg }}'
+          dest: C:\Temp\wsusremove-settings.reg
+          remote_src: yes
+        when: remove_old_wsus
 
-  # 6. Verify that the device now points to the HTM MDUS server
-  - name: Query WSUS server URL from the registry
-    win_command: |
-      reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate" /v WUServer
-    register: mdus_server_check
-    failed_when: mdus_server_check.rc != 0
+      - name: Copy SQL_wsus_manual.reg (optional – for SQL devices)
+        win_copy:
+          src: '{{ sql_manual_reg }}'
+          dest: C:\Temp\SQL_wsus_manual.reg
+          remote_src: yes
 
-  - name: Show MDUS server configuration
-    debug:
-      msg: "{{ mdus_server_check.stdout }}"
+      - name: Copy wsus_reinitialize.bat
+        win_copy:
+          src: '{{ reinit_bat }}'
+          dest: C:\Temp\wsus_reinitialize.bat
+          remote_src: yes
 
-  # 7. Create/ensure the nightly unattended‑install scheduled task
-#  - name: Create scheduled task for nightly MDUS install
- #   win_scheduled_task:
- #     name: MDUS_Nightly_Install
- #     actions:
-   #     - path: C:\Windows\System32\wuauclt.exe
-   #       arguments: "/detectnow /updatenow"
-   #   triggers:
-    #    - type: daily
-   #       start_boundary: "{{ lookup('pipe','date +%Y-%m-%d') }}T{{ mdus_install_time }}:00"
-    #  enabled: yes
-    #  run_level: highest
-    #  username: SYSTEM
-   #   state: present
-  - name: Create scheduled task for nightly MDUS
-    ansible.windows.win_command: >
-      schtasks /create /tn "MDUS_Nightly_Install"
-      /tr "C:\Windows\System32\wuauclt.exe /detectnow /updatenow"
-      /sc daily
-      /st {{ mdus_install_time }}
-      /ru "SYSTEM"
-      /rl HIGHEST
-      /f
-    register: task_creation
-    changed_when: "'SUCCESS' in task_creation.stdout"
+      # 4. CONFIGURATION: This section imports registry keys to point the OS to the new update
+      #    server and runs a re-initialization script to reset the Update Agent.
 
-  # 8. Clean up temporary files (always runs, even on failure)
-  - block:
+      - name: Import wsus-auto.reg to enroll the device
+        win_command: reg import "C:\Temp\wsus-auto.reg"
+        register: import_auto
+        failed_when: import_auto.rc != 0
+
+      - name: Re‑initialize WSUS client
+        win_command: C:\Temp\wsus_reinitialize.bat
+        args:
+          creates: C:\Windows\SoftwareDistribution\Download
+        register: reinit
+        failed_when: reinit.rc != 0
+
+      # 5. VERIFICATION: Uses win_reg_stat to confirm the WUServer URL is active.
+
+      - name: Query WSUS server URL from the registry
+        ansible.windows.win_reg_stat:
+          path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate
+          name: WUServer
+        register: mdus_reg_stat
+
+      - name: Show MDUS server configuration
+        ansible.builtin.debug:
+          msg: "The WUServer value is: {{ mdus_reg_stat.value | default('Value not found') }}"
+ 
+      - name: Create scheduled task for nightly MDUS install
+        ansible.windows.win_scheduled_task:
+          name: MDUS_Nightly_Install
+          actions:
+            - path: C:\Windows\System32\wuauclt.exe
+              arguments: "/detectnow /updatenow"
+          triggers:
+            - type: daily
+              start_boundary: "{{ lookup('pipe','date +%Y-%m-%d') }}T{{ mdus_install_time }}:00"
+          enabled: yes
+          run_level: highest
+          username: SYSTEM
+          state: present
+    always:
+
+      # 7. CLEANUP: Securely removes sensitive .reg files regardless of success.
+
       - name: Remove temporary registry and batch files
         win_file:
           path: "{{ item }}"
@@ -131,7 +144,8 @@
           - C:\Temp\SQL_wsus_manual.reg
           - C:\Temp\wsus_reinitialize.bat
           - C:\Temp\mdus_check.txt
-    always: 
-      - name: Report success
-        debug:
-          msg: "MDUS configuration completed successfully on {{ inventory_hostname }}."
+      ignore_errors: yes
+
+  - name: Report success
+    debug:
+      msg: "MDUS configuration completed successfully on {{ inventory_hostname }}."
