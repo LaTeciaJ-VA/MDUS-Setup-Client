@@ -118,7 +118,7 @@
           msg: "The WUServer value is: {{ mdus_reg_stat.value | default('Value not found') }}"
  
       - name: Create scheduled task for nightly MDUS install
-        ansible.windows.win_scheduled_task:
+        community.windows.win_scheduled_task:
           name: MDUS_Nightly_Install
           actions:
             - path: C:\Windows\System32\wuauclt.exe
