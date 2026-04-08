@@ -144,7 +144,7 @@
           - C:\Temp\SQL_wsus_manual.reg
           - C:\Temp\wsus_reinitialize.bat
           - C:\Temp\mdus_check.txt
-      ignore_errors: yes
+        ignore_errors: yes
 
   - name: Report success
     debug:
