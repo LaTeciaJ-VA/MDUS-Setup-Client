@@ -30,7 +30,8 @@
     - community.windows
   become: yes
   become_method: runas
-  become_user: 'VA\VHAV06HTMAAP'
+  # Win_Share_User is mapped from the PE Custom Credential
+  become_user: "{{ win_share_user }}"
   become_flags: "logon_type=new_credentials"
   gather_facts: false
   serial: 5                           # limit parallel runs for large fleets
